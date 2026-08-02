@@ -238,13 +238,18 @@ pub fn base_url() -> String {
 /// Representação de um mod exposto pelo painel (`/api/mods`).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ServerMod {
-    pub file: String,
+    pub id: String,
     pub name: String,
-    pub version: String,
+    pub friendly_name: String,
     #[serde(default)]
     pub description: String,
     #[serde(default)]
+    pub version: String,
+    pub filename: String,
+    #[serde(default)]
     pub size: u64,
+    #[serde(default)]
+    pub download_url: String,
 }
 
 /// Resposta envelopada de `/api/mods` (`{count, mods}`).
@@ -256,30 +261,26 @@ struct ModsResponse {
     mods: Vec<ServerMod>,
 }
 
-/// Status do servidor retornado por `/api/status`.
+/// Status do servidor retornado por `/api/status` (formato real do painel).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ServerStatus {
-    pub running: bool,
+    pub online: bool,
     #[serde(default)]
-    pub pid: u32,
+    pub players: Players,
     #[serde(default)]
     pub version: String,
     #[serde(default)]
-    pub port: u16,
+    pub motd: Vec<String>,
     #[serde(default)]
-    pub public_ip: String,
+    pub ping: Option<u32>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Players {
     #[serde(default)]
-    pub join_link: String,
+    pub online: u32,
     #[serde(default)]
-    pub players_online: u32,
-    #[serde(default)]
-    pub players_max: u32,
-    #[serde(default)]
-    pub uptime_seconds: u64,
-    #[serde(default)]
-    pub motd: String,
-    #[serde(default)]
-    pub started_at: String,
+    pub max: u32,
 }
 
 /// Lista os mods exigidos pelo servidor (`GET /api/mods`).

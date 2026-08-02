@@ -18,7 +18,8 @@ pub async fn download_mod(
 
     let base = std::env::var("LAUNCHER_API_BASE")
         .unwrap_or_else(|_| "https://servermine.centralchamados.xyz".to_string());
-    let url = format!("{}/api/mods/file/{}", base.trim_end_matches('/'), safe);
+    // O painel serve os mods em /mods/<filename> (mesmo formato do app macOS).
+    let url = format!("{}/mods/{}", base.trim_end_matches('/'), safe);
 
     let client = reqwest::Client::builder()
         .build()
