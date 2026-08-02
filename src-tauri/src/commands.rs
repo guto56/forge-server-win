@@ -179,6 +179,49 @@ pub fn list_local_mods(dir: String) -> Result<Vec<LocalMod>, String> {
     Ok(out)
 }
 
+/// Detecta a pasta de shaderpacks do Minecraft (ao lado da pasta de mods).
+#[tauri::command]
+pub fn detect_shaderpacks_dir() -> Result<ModsDirInfo, String> {
+    let std_mods = standard_mods_dir()
+        .ok_or_else(|| "Não foi possível resolver a pasta do Minecraft neste SO.".to_string())?;
+    // shaderpacks fica no mesmo nível de mods (ex.: .minecraft/shaderpacks)
+    let std_dir = std_mods.parent().map(|p| p.join("shaderpacks")).unwrap_or(std_mods);
+    std::fs::create_dir_all(&std_dir).map_err(|e| format!("Falha ao criar pasta de shaderpacks: {e}"))?;
+    Ok(ModsDirInfo {
+        path: std_dir.to_string_lossy().to_string(),
+        created: false,
+        is_standard: true,
+    })
+}
+
+/// Lista os shaderpacks (.zip/.jar) presentes numa pasta local.
+#[tauri::command]
+pub fn list_local_shaders(dir: String) -> Result<Vec<LocalMod>, String> {
+    let path = PathBuf::from(&dir);
+    if !path.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut out = Vec::new();
+    let read = std::fs::read_dir(&path).map_err(|e| e.to_string())?;
+    for entry in read.flatten() {
+        let p = entry.path();
+        let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+        if ext == "zip" || ext == "jar" {
+            let file = p.file_name().unwrap_or_default().to_string_lossy().to_string();
+            let (name, version) = parse_mod_meta(&file);
+            let size = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
+            out.push(LocalMod {
+                file,
+                name,
+                version,
+                size,
+            });
+        }
+    }
+    out.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    Ok(out)
+}
+
 /// Grava o conteúdo de um mod (bytes) na pasta informada, com o nome informado.
 /// Usa path.basename para evitar traversal — só o nome do arquivo é aceito.
 #[tauri::command]
@@ -305,6 +348,54 @@ pub async fn server_mods() -> Result<Vec<ServerMod>, String> {
         .await
         .map_err(|e| format!("Falha ao parsear JSON de /api/mods: {e}"))?;
     Ok(body.mods)
+}
+
+/// Representação de um shader exposto pelo painel (`/api/shaders`).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ServerShader {
+    pub id: String,
+    pub name: String,
+    pub friendly_name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub version: String,
+    pub filename: String,
+    #[serde(default)]
+    pub size: u64,
+    #[serde(default)]
+    pub download_url: String,
+}
+
+/// Resposta envelopada de `/api/shaders` (`{shaders}`).
+#[derive(Debug, Clone, serde::Deserialize)]
+struct ShadersResponse {
+    #[serde(default)]
+    shaders: Vec<ServerShader>,
+}
+
+/// Lista os shaders disponíveis no painel (`GET /api/shaders`).
+#[tauri::command]
+pub async fn server_shaders() -> Result<Vec<ServerShader>, String> {
+    let url = format!("{}/api/shaders", api_base());
+    let client = reqwest::Client::builder()
+        .build()
+        .map_err(|e| format!("Falha ao criar cliente HTTP: {e}"))?;
+    let resp = client
+        .get(&url)
+        .header("Accept", "application/json")
+        .header("User-Agent", "LauncherMC/1.0 (Tauri)")
+        .send()
+        .await
+        .map_err(|e| format!("Falha ao conectar no painel (shaders): {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("Servidor retornou status {} em /api/shaders", resp.status()));
+    }
+    let body = resp
+        .json::<ShadersResponse>()
+        .await
+        .map_err(|e| format!("Falha ao parsear JSON de /api/shaders: {e}"))?;
+    Ok(body.shaders)
 }
 
 /// Consulta o status do servidor (`GET /api/status`).

@@ -22,6 +22,17 @@ interface ModInfo {
   download_url: string
 }
 
+interface ShaderInfo {
+  id: string
+  name: string
+  friendly_name: string
+  description: string
+  version: string
+  filename: string
+  size: number
+  download_url: string
+}
+
 interface ModsDirInfo {
   path: string
   created: boolean
@@ -55,7 +66,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       <div className="splash-content">
         <div className="splash-logo">⛏</div>
         <h1 className="splash-title">Forge Server</h1>
-        <p className="splash-subtitle">Minecraft 1.20.1</p>
+        <p className="splash-subtitle">Minecraft 26.2</p>
       </div>
     </div>
   )
@@ -66,7 +77,7 @@ function Navbar({ activeTab, setActiveTab }: { activeTab: number; setActiveTab: 
     <nav className="navbar">
       <div className="navbar-brand">
         <span className="logo">⛏</span>
-        <span className="title">Forge 1.20.1</span>
+        <span className="title">Forge 26.2</span>
       </div>
       <div className="navbar-tabs">
         <button className={`tab-btn ${activeTab === 0 ? 'active' : ''}`} onClick={() => setActiveTab(0)}>
@@ -74,6 +85,9 @@ function Navbar({ activeTab, setActiveTab }: { activeTab: number; setActiveTab: 
         </button>
         <button className={`tab-btn ${activeTab === 1 ? 'active' : ''}`} onClick={() => setActiveTab(1)}>
           Mods
+        </button>
+        <button className={`tab-btn ${activeTab === 2 ? 'active' : ''}`} onClick={() => setActiveTab(2)}>
+          Shaders
         </button>
       </div>
     </nav>
@@ -372,6 +386,105 @@ function HomeView({
   )
 }
 
+function ShaderCardFull({
+  shader,
+  installed,
+  downloading,
+  progress,
+  onInstall
+}: {
+  shader: ShaderInfo
+  installed: boolean
+  downloading: boolean
+  progress: number
+  onInstall: () => void
+}) {
+  const icon = shader.name === 'iris' ? '📷' : shader.name === 'complementary' ? '🌞' : '✨'
+  return (
+    <div className={`mod-card-full ${installed ? 'installed' : ''}`}>
+      <div className="mod-icon" style={{ flexShrink: 0 }}>{icon}</div>
+      <div className="mod-card-info">
+        <div className="mod-card-name-row">
+          <span className="mod-card-name">{shader.name}</span>
+        </div>
+        <div className="mod-card-desc">{shader.description}</div>
+        <div className="mod-card-size">{formatBytes(shader.size)}</div>
+      </div>
+      <div className="mod-card-action">
+        {installed ? (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 22, color: 'var(--green)' }}>✓</div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', marginTop: 6 }}>Instalado</div>
+          </div>
+        ) : downloading ? (
+          <div style={{ textAlign: 'center', minWidth: 100 }}>
+            <div className="progress-linear">
+              <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)' }}>{Math.round(progress * 100)}%</div>
+          </div>
+        ) : (
+          <button className="btn btn-primary" onClick={onInstall} disabled={downloading} style={{ padding: '10px 16px', fontSize: 13 }}>
+            Instalar
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ShadersView({
+  shaders,
+  installedShaders,
+  downloadingShaders,
+  downloadProgress,
+  onInstallShader
+}: {
+  shaders: ShaderInfo[]
+  installedShaders: Set<string>
+  downloadingShaders: Set<string>
+  downloadProgress: Record<string, number>
+  onInstallShader: (shader: ShaderInfo) => void
+}) {
+  if (shaders.length === 0) {
+    return (
+      <div className="glass-card" style={{ textAlign: 'center', padding: 60 }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>🎨</div>
+        <p style={{ color: 'var(--text-secondary)' }}>Nenhum shader disponível</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mods-view">
+      <div className="mods-header-row">
+        <div>
+          <h2 className="section-title">Shaders</h2>
+          <p className="section-subtitle">Baixe o Iris (mod de shaders) e os shaderpacks para gráficos bonitos</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {shaders.map(shader => {
+          const installed = installedShaders.has(shader.filename)
+          const downloading = downloadingShaders.has(shader.id)
+          const progress = downloadProgress[shader.id] || 0
+          return (
+            <ShaderCardFull
+              key={shader.id}
+              shader={shader}
+              installed={installed}
+              downloading={downloading}
+              progress={progress}
+              onInstall={() => onInstallShader(shader)}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [splashDone, setSplashDone] = useState(false)
   const [activeTab, setActiveTab] = useState(0)
@@ -384,6 +497,10 @@ function App() {
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
   const [downloadAllProgress, setDownloadAllProgress] = useState(0)
   const [isDownloadingAll, setIsDownloadingAll] = useState(false)
+  const [shaders, setShaders] = useState<ShaderInfo[]>([])
+  const [installedShaders, setInstalledShaders] = useState<Set<string>>(new Set())
+  const [downloadingShaders, setDownloadingShaders] = useState<Set<string>>(new Set())
+  const [shaderDownloadProgress, setShaderDownloadProgress] = useState<Record<string, number>>({})
 
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true)
@@ -391,7 +508,7 @@ function App() {
       const s = await invoke<ServerStatus>('server_status')
       setStatus(s)
     } catch {
-      setStatus({ online: false, players: { online: 0, max: 20 }, version: '1.20.1 (Forge)', motd: ['Servidor Forge 1.20.1'], ping: null })
+      setStatus({ online: false, players: { online: 0, max: 20 }, version: '26.2 (Vanilla)', motd: ['Servidor Vanilla 26.2'], ping: null })
     } finally {
       setStatusLoading(false)
     }
@@ -405,6 +522,50 @@ function App() {
       setMods([])
     }
   }, [])
+
+  const fetchShaders = useCallback(async () => {
+    try {
+      const s = await invoke<ShaderInfo[]>('server_shaders')
+      setShaders(s)
+    } catch {
+      setShaders([])
+    }
+  }, [])
+
+  const checkShaderpacksDir = useCallback(async (): Promise<string | null> => {
+    try {
+      const dir = await invoke<ModsDirInfo>('detect_shaderpacks_dir')
+      return dir.path
+    } catch {
+      return null
+    }
+  }, [])
+
+  const checkInstalledShaders = useCallback(async (dir: string) => {
+    try {
+      const local = await invoke<{ file: string }[]>('list_local_shaders', { dir })
+      setInstalledShaders(new Set(local.map(m => m.file)))
+    } catch {
+      setInstalledShaders(new Set())
+    }
+  }, [])
+
+  const installShader = useCallback(async (shader: ShaderInfo) => {
+    const dir = await checkShaderpacksDir()
+    if (!dir) return
+    setDownloadingShaders(prev => new Set(prev).add(shader.id))
+    setShaderDownloadProgress(prev => ({ ...prev, [shader.id]: 0 }))
+    try {
+      const bytes = await invoke<Uint8Array>('download_shader', { filename: shader.filename })
+      await invoke('save_mod', { dir, filename: shader.filename, contents: Array.from(bytes) })
+      setInstalledShaders(prev => new Set(prev).add(shader.filename))
+      setShaderDownloadProgress(prev => ({ ...prev, [shader.id]: 1 }))
+    } catch (e) {
+      console.error('Shader download failed:', e)
+    } finally {
+      setDownloadingShaders(prev => { const n = new Set(prev); n.delete(shader.id); return n })
+    }
+  }, [checkShaderpacksDir])
 
   const checkModsDir = useCallback(async () => {
     try {
@@ -469,8 +630,10 @@ function App() {
   useEffect(() => {
     const init = async () => {
       await checkModsDir()
-      await Promise.all([fetchStatus(), fetchMods()])
+      await Promise.all([fetchStatus(), fetchMods(), fetchShaders()])
       if (modsDir) await checkInstalledMods(modsDir.path)
+      const shaderDir = await checkShaderpacksDir()
+      if (shaderDir) await checkInstalledShaders(shaderDir)
       
       // Listen for download progress events
       const unlisten = await listen<DownloadProgress>('download-progress', (e) => {
@@ -496,6 +659,14 @@ function App() {
             statusLoading={statusLoading}
             mods={mods}
             installedMods={installedMods}
+          />
+        ) : activeTab === 2 ? (
+          <ShadersView
+            shaders={shaders}
+            installedShaders={installedShaders}
+            downloadingShaders={downloadingShaders}
+            downloadProgress={shaderDownloadProgress}
+            onInstallShader={installShader}
           />
         ) : (
           <ModsView
