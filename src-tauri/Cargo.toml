@@ -1,0 +1,25 @@
+[package]
+name = "forge-server-win"
+version = "1.0.0"
+description = "Forge Server Launcher for Windows"
+authors = ["centralchamados"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "forge_server_win"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json", "default-tls"], default-features = false }
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+dirs = "5"
+zip = "0.6"
