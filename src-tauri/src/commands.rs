@@ -275,7 +275,7 @@ pub struct ServerStatus {
     pub ping: Option<u32>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct Players {
     #[serde(default)]
     pub online: u32,
