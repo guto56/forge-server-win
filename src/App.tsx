@@ -66,7 +66,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       <div className="splash-content">
         <div className="splash-logo">⛏</div>
         <h1 className="splash-title">Forge Server</h1>
-        <p className="splash-subtitle">Minecraft 26.2</p>
+        <p className="splash-subtitle">Minecraft 1.20.1</p>
       </div>
     </div>
   )
@@ -77,7 +77,7 @@ function Navbar({ activeTab, setActiveTab }: { activeTab: number; setActiveTab: 
     <nav className="navbar">
       <div className="navbar-brand">
         <span className="logo">⛏</span>
-        <span className="title">Forge 26.2</span>
+        <span className="title">Forge 1.20.1</span>
       </div>
       <div className="navbar-tabs">
         <button className={`tab-btn ${activeTab === 0 ? 'active' : ''}`} onClick={() => setActiveTab(0)}>
@@ -508,7 +508,7 @@ function App() {
       const s = await invoke<ServerStatus>('server_status')
       setStatus(s)
     } catch {
-      setStatus({ online: false, players: { online: 0, max: 20 }, version: '26.2 (Vanilla)', motd: ['Servidor Vanilla 26.2'], ping: null })
+      setStatus({ online: false, players: { online: 0, max: 20 }, version: '1.20.1 (Forge)', motd: ['Servidor Forge 1.20.1'], ping: null })
     } finally {
       setStatusLoading(false)
     }
@@ -639,8 +639,21 @@ function App() {
       const unlisten = await listen<DownloadProgress>('download-progress', (e) => {
         setDownloadProgress(prev => ({ ...prev, [e.payload.modId]: e.payload.progress }))
       })
+
+      // Auto-refresh: poll the server every 15s so new mods/shaders added to
+      // the server's mods/ folder appear without re-downloading the launcher.
+      const poll = setInterval(async () => {
+        await Promise.all([fetchStatus(), fetchMods(), fetchShaders()])
+        const dirInfo = await checkModsDir()
+        if (dirInfo) await checkInstalledMods(dirInfo.path)
+        const shaderDir2 = await checkShaderpacksDir()
+        if (shaderDir2) await checkInstalledShaders(shaderDir2)
+      }, 15000)
       
-      return unlisten
+      return () => {
+        clearInterval(poll)
+        unlisten()
+      }
     }
     init()
   }, [])
