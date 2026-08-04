@@ -66,7 +66,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       <div className="splash-content">
         <div className="splash-logo">⛏</div>
         <h1 className="splash-title">Forge Server</h1>
-        <p className="splash-subtitle">Minecraft 1.20.1</p>
+        <p className="splash-subtitle">Minecraft 26.2 (Fabric)</p>
       </div>
     </div>
   )
@@ -77,7 +77,7 @@ function Navbar({ activeTab, setActiveTab }: { activeTab: number; setActiveTab: 
     <nav className="navbar">
       <div className="navbar-brand">
         <span className="logo">⛏</span>
-        <span className="title">Forge 1.20.1</span>
+        <span className="title">Fabric 26.2</span>
       </div>
       <div className="navbar-tabs">
         <button className={`tab-btn ${activeTab === 0 ? 'active' : ''}`} onClick={() => setActiveTab(0)}>
@@ -112,7 +112,7 @@ function StatusCard({ status, loading }: { status: ServerStatus | null; loading:
         </div>
         <div className="info-tile">
           <div className="info-tile-header"><span className="input-icon">🎮</span> VERSÃO</div>
-          <div className="info-tile-value">{status?.version ?? '1.20.1 (Forge)'}</div>
+          <div className="info-tile-value">{status?.version ?? '26.2 (Fabric)'}</div>
         </div>
         <div className="info-tile">
           <div className="info-tile-header"><span className="input-icon">📡</span> PING</div>
@@ -120,7 +120,7 @@ function StatusCard({ status, loading }: { status: ServerStatus | null; loading:
         </div>
         <div className="info-tile">
           <div className="info-tile-header"><span className="input-icon">📝</span> MOTD</div>
-          <div className="info-tile-value" style={{ fontSize: 11 }}>{status?.motd[0] ?? 'Servidor Forge 1.20.1'}</div>
+          <div className="info-tile-value" style={{ fontSize: 11 }}>{status?.motd[0] ?? 'Servidor Fabric 26.2 | JEI + Shaders'}</div>
         </div>
       </div>
       <div className="ip-row">
@@ -508,7 +508,7 @@ function App() {
       const s = await invoke<ServerStatus>('server_status')
       setStatus(s)
     } catch {
-      setStatus({ online: false, players: { online: 0, max: 20 }, version: '1.20.1 (Forge)', motd: ['Servidor Forge 1.20.1'], ping: null })
+      setStatus({ online: false, players: { online: 0, max: 20 }, version: '26.2 (Fabric)', motd: ['Servidor Fabric 26.2 | JEI + Shaders'], ping: null })
     } finally {
       setStatusLoading(false)
     }
