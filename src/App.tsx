@@ -120,7 +120,7 @@ function StatusCard({ status, loading }: { status: ServerStatus | null; loading:
         </div>
         <div className="info-tile">
           <div className="info-tile-header"><span className="input-icon">📝</span> MOTD</div>
-          <div className="info-tile-value" style={{ fontSize: 11 }}>{status?.motd[0] ?? 'Servidor Fabric 1.21.1 | Antarchy + JEI'}</div>
+          <div className="info-tile-value" style={{ fontSize: 11 }}>{status?.motd[0] ?? 'Servidor Fabric 1.21.1 | 17 Mods'}</div>
         </div>
       </div>
       <div className="ip-row">
@@ -508,7 +508,7 @@ function App() {
       const s = await invoke<ServerStatus>('server_status')
       setStatus(s)
     } catch {
-      setStatus({ online: false, players: { online: 0, max: 20 }, version: '1.21.1 (Fabric)', motd: ['Servidor Fabric 1.21.1 | Antarchy + JEI'], ping: null })
+      setStatus({ online: false, players: { online: 0, max: 20 }, version: '1.21.1 (Fabric)', motd: ['Servidor Fabric 1.21.1 | 17 Mods'], ping: null })
     } finally {
       setStatusLoading(false)
     }
